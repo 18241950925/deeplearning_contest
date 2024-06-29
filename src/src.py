@@ -70,15 +70,15 @@ model = torch.load('../models/MF.pth')
 
 
 # 评估模型
-f1 = evaluate_model(model, x_valid, y_valid)
-print(f'Validation F1 score: {f1}')
-
+# f1 = evaluate_model(model, x_valid, y_valid)
+# print(f'Validation F1 score: {f1}')
 
 # 生成test的最终结果
 target = pd.read_csv('../data/test_dataset.csv')
-target_tensor=torch.tensor(target.values).to(device)
+target_tensor=torch.tensor(target['user_id'].values).to(device)
 res = model.predict(target_tensor)
+
 # 将结果数据转换为DataFrame
-final_df = pd.DataFrame({'user_id': [row for row in target], 'item_id': [row for row in res]})
+final_df = pd.DataFrame({'user_id': [row.item() for row in target_tensor.cpu()], 'item_id': [row for row in res]})
 # 将DataFrame保存到final.csv
 final_df.to_csv('../data/final.csv', index=False)
