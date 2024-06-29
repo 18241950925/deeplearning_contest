@@ -1,4 +1,3 @@
-
 import random
 
 import numpy as np
@@ -8,6 +7,10 @@ from tqdm import tqdm
 from sklearn.metrics import f1_score
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
+
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
+
 class MatrixFactorization(torch.nn.Module):
     def __init__(self, num_users, num_items, embedding_dim=32):
         super(MatrixFactorization, self).__init__()
@@ -22,20 +25,19 @@ class MatrixFactorization(torch.nn.Module):
         return scores
 
     def predict(self, user_ids):
-        # 将用户ID转换为Tensor，并移到GPU上（如果有）
+        # 将用户ID转换为Tensor，并移到GPU上
         user_ids_tensor = torch.tensor(user_ids, dtype=torch.long).to(device)
 
         # 获取用户的嵌入向量
         user_embedding = self.user_embedding(user_ids_tensor)
-
+        predictions = []
         # 计算用户与所有物品的预测评分
         item_ids = torch.arange(self.item_embedding.num_embeddings).to(device)
         item_embedding = self.item_embedding(item_ids)
-        scores = torch.matmul(user_embedding, item_embedding.transpose(0, 1))
+        for user in tqdm(user_embedding):
+            user = user.unsqueeze(0)  # 形状: (1, embedding_dim)
+            scores = torch.matmul(user, item_embedding.transpose(0, 1))
+            max_score_index = torch.argmax(scores, dim=1)  # 形状: (1,)
+            predictions.append(max_score_index.item())
 
-        # 取每个用户最高分数对应的物品ID作为预测结果
-        predictions = torch.argmax(scores, dim=1)
-
-        return predictions.cpu().numpy()
-
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+        return predictions
